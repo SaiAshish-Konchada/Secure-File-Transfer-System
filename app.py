@@ -36,9 +36,6 @@ def create_users_table():
         ''')
         conn.commit()
 
-# Step 1: Set up the PostgreSQL database
-create_users_table()
-
 # Function to check password complexity requirements
 def is_password_complex(password):
     # Require at least 8 characters, with at least one uppercase letter, one lowercase letter, and one digit
@@ -47,6 +44,11 @@ def is_password_complex(password):
 # Step 2: API route for user registration
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # Check if the user is already logged in using the session data
+    if 'username' in session:
+        # If the user is logged in, redirect to the homepage
+        return redirect(url_for('index'))
+
     if request.method == 'POST':
         # Retrieve the user's input from the registration form
         username = request.form['username']
@@ -94,6 +96,11 @@ def register():
 # Step 3: API route for user login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Check if the user is already logged in using the session data
+    if 'username' in session:
+        # If the user is logged in, redirect to the homepage
+        return redirect(url_for('index'))
+
     if request.method == 'POST':
         # Retrieve the user's input from the login form
         username = request.form['username']
