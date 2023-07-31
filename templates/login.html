@@ -19,6 +19,13 @@
                 </ul>
             {% endif %}
         {% endwith %}
+
+        {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+        {% endif %}
+
         <form method="POST" action="/login">
             <div class="form-group">
                 <label for="username">Username:</label>
@@ -27,6 +34,11 @@
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" class="form-control" required>
+            </div>
+            <!-- Add TOTP code input field -->
+            <div class="form-group">
+                <label for="totp_code">TOTP Code:</label>
+                <input type="text" id="totp_code" name="totp_code" class="form-control" required>
             </div>
             <button type="submit" class="btn btn-primary">Login</button>
         </form>
