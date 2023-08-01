@@ -7,21 +7,26 @@ import base64
 from datetime import datetime, timedelta
 from flask import session, render_template, url_for, request, redirect
 from database import get_db_connection
-from utils import is_password_complex, generate_qr_code
+from utils import is_password_complex, generate_qr_code, generate_csrf_token
 
-# Function to check password complexity requirements
-def is_password_complex(password):
-    # Require at least 8 characters, with at least one uppercase letter, one lowercase letter, and one digit
-    return bool(re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$', password))
-
-# API route for user registration
 def register():
     # Check if the user is already logged in using the session data
     if 'username' in session:
         # If the user is logged in, redirect to the homepage
         return redirect(url_for('index'))
 
+    # Retrieve the CSRF token from the session or generate a new one if it doesn't exist
+    csrf_token = session.get('csrf_token')
+    if not csrf_token:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+
     if request.method == 'POST':
+        # Verify CSRF token to prevent CSRF attacks
+        csrf_token_from_form = request.form.get('csrf_token')
+        if not csrf_token_from_form or csrf_token_from_form != session.get('csrf_token'):
+            return "Invalid CSRF token"
+
         # Retrieve the user's input from the registration form
         username = request.form['username']
         password = request.form['password']
@@ -29,7 +34,7 @@ def register():
         # Validate the input (e.g., check if the username is unique, enforce password complexity)
         if not username or not password:
             error = 'Please provide both username and password.'
-            return render_template('register.html', error=error)
+            return render_template('register.html', error=error, csrf_token=csrf_token)
 
         # Check if the username is unique (not already taken)
         with get_db_connection() as conn:
@@ -39,12 +44,12 @@ def register():
 
             if user_count > 0:
                 error = 'Username already taken. Please choose a different username.'
-                return render_template('register.html', error=error)
+                return render_template('register.html', error=error, csrf_token=csrf_token)
 
         # Check password complexity requirements
         if not is_password_complex(password):
-            error = 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one digit.'
-            return render_template('register.html', error=error)
+            error = 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character.'
+            return render_template('register.html', error=error, csrf_token=csrf_token)
 
         # Generate TOTP secret for the user
         totp = pyotp.TOTP(pyotp.random_base32())
@@ -63,16 +68,18 @@ def register():
             # Create QR code containing the TOTP secret for the user
             qr_code_img, totp_uri = generate_qr_code(username, totp_secret)
 
+            # Reset CSRF token after successful registration
+            session.pop('csrf_token', None)
+
             # Redirect to the 2FA setup page after successful registration
             return render_template('setup_2fa.html', username=username, qr_code_img=qr_code_img, totp_uri=totp_uri)
         except psycopg2.Error as e:
             # Handle any errors that may occur during database operation
             error = 'An error occurred during registration. Please try again later.'
-            return render_template('register.html', error=error)
+            return render_template('register.html', error=error, csrf_token=csrf_token)
 
-    return render_template('register.html')
+    return render_template('register.html', csrf_token=csrf_token)
 
-# API route for user login
 def login():
     # Check if the user is already logged in using the session data
     if 'username' in session:
@@ -80,6 +87,11 @@ def login():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
+        # Verify CSRF token to prevent CSRF attacks
+        csrf_token_from_form = request.form.get('csrf_token')
+        if not csrf_token_from_form or csrf_token_from_form != session.get('csrf_token'):
+            return "Invalid CSRF token"
+
         # Retrieve the user's input from the login form
         username = request.form['username']
         password = request.form['password']
@@ -95,7 +107,7 @@ def login():
             if blocked_until and blocked_until > datetime.now():
                 time_remaining = blocked_until - datetime.now()
                 error = f'Your account is temporarily blocked due to multiple failed login attempts. Please try again after {time_remaining.seconds // 60} minutes.'
-                return render_template('login.html', error=error)
+                return render_template('login.html', error=error, csrf_token=session['csrf_token'])
 
         # Verify the login credentials against the stored data in the database
         try:
@@ -116,24 +128,32 @@ def login():
                         # Reset failed login attempts count for the current IP address
                         reset_failed_login_attempts(ip_address)
 
+                        # Reset CSRF token after successful login
+                        session.pop('csrf_token', None)
+
                         return redirect(url_for('index'))
                     else:
                         # Invalid TOTP code, show an error message on the login page
                         error = 'Invalid TOTP code. Please try again.'
                         increase_failed_login_attempts(ip_address)
-                        return render_template('login.html', error=error)
+                        return render_template('login.html', error=error, csrf_token=session['csrf_token'])
 
                 else:
                     # Invalid login credentials, show an error message on the login page
                     error = 'Invalid credentials. Please try again.'
                     increase_failed_login_attempts(ip_address)
-                    return render_template('login.html', error=error)
+                    return render_template('login.html', error=error, csrf_token=session['csrf_token'])
         except psycopg2.Error as e:
             # Handle any errors that may occur during database operation
             error = 'An error occurred during login. Please try again later.'
-            return render_template('login.html', error=error)
+            return render_template('login.html', error=error, csrf_token=session['csrf_token'])
 
-    return render_template('login.html')
+    # Generate a new CSRF token for the login form
+    csrf_token = generate_csrf_token()
+    session['csrf_token'] = csrf_token
+
+    return render_template('login.html', csrf_token=session['csrf_token'])
+
 
 # API route for user logout
 def logout():

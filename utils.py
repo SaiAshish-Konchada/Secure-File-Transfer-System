@@ -1,9 +1,13 @@
 import base64
-
 import pyotp
 import pyqrcode
 import io
 import re
+import secrets
+
+# Function to generate a new CSRF token
+def generate_csrf_token():
+    return secrets.token_hex(16)
 
 def is_password_complex(password):
     # Require at least 8 characters, with at least one uppercase letter, one lowercase letter, and one digit

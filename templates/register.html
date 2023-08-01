@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Register</title>
+    <title>Register - Secure File Transfer System</title>
     <!-- Add Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
@@ -12,6 +12,8 @@
             <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
         <form method="POST" action="/register">
+            <!-- Add CSRF token input field -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="username">Username:</label>
                 <input type="text" id="username" name="username" class="form-control" required>
@@ -19,6 +21,8 @@
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" class="form-control" required>
+                <!-- Add password requirements info -->
+                <small class="form-text text-muted">Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.</small>
             </div>
             <button type="submit" class="btn btn-primary">Register</button>
         </form>

